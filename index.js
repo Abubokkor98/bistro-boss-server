@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // mongoDb
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.4nvaj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -24,6 +24,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const menuCollection = client.db("Bistro-boss-DB").collection("menu");
+    const userCollection = client.db("Bistro-boss-DB").collection("users");
     const reviewCollection = client.db("Bistro-boss-DB").collection("reviews");
     const cartCollection = client.db("Bistro-boss-DB").collection("carts");
 
@@ -46,7 +47,22 @@ async function run() {
     });
 
     app.get("/carts", async (req, res) => {
-      const result = await cartCollection.find().toArray();
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await cartCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.delete("/carts/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // user related APIs
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
       res.send(result);
     });
     // Send a ping to confirm a successful connection
