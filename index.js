@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const jwt = require('jsonwebtoken')
+const jwt = require("jsonwebtoken");
 const port = process.env.PORT || 5000;
 
 // middleware
@@ -28,6 +28,25 @@ async function run() {
     const userCollection = client.db("Bistro-boss-DB").collection("users");
     const reviewCollection = client.db("Bistro-boss-DB").collection("reviews");
     const cartCollection = client.db("Bistro-boss-DB").collection("carts");
+
+    // jwt APIs
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
+    // verify token
+    const verifyToken = (req, res, next) => {
+      console.log("inside verify", req.headers);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "forbidden access" });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      next();
+    };
 
     // get menu from db
     app.get("/menu", async (req, res) => {
@@ -76,7 +95,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
