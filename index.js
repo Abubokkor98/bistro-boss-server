@@ -40,7 +40,7 @@ async function run() {
     });
     // verify token
     const verifyToken = (req, res, next) => {
-      console.log("inside verify", req.headers.authorization);
+      // console.log("inside verify", req.headers.authorization);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "unauthorized access" });
       }
@@ -69,6 +69,12 @@ async function run() {
     // get menu from db
     app.get("/menu", async (req, res) => {
       const result = await menuCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/menu/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await menuCollection.findOne(query);
       res.send(result);
     });
     app.post("/menu", verifyToken, verifyAdmin, async (req, res) => {
