@@ -230,7 +230,7 @@ async function run() {
     });
 
     // stats or analytics
-    app.get("/admin-stats", async (req, res) => {
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
       const users = await userCollection.estimatedDocumentCount();
       const menuItems = await menuCollection.estimatedDocumentCount();
       const totalOrder = await paymentCollection.estimatedDocumentCount();
@@ -257,6 +257,51 @@ async function run() {
         .toArray();
       const revenue = result.length > 0 ? result[0].totalRevenue : 0;
       res.send({ users, menuItems, totalOrder, revenue });
+    });
+
+    // order status
+    /**
+     * -----------------------------
+     *    NON-Efficient Way
+     * ------------------------------
+     * 1. load all the payments
+     * 2. for every menuItemIds (which is an array), go find the item from menu collection
+     * 3. for every item in the menu collection that you found from a payment entry (document)
+     */
+
+    // using aggregate pipeline
+    app.get("/order-stats", async (req, res) => {
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $unwind: "$menuItemIds",
+          },
+          {
+            $set: {
+              menuItemIds: { $toObjectId: "$menuItemIds" },
+            },
+          },
+          {
+            $lookup: {
+              from: "menu",
+              localField: "menuItemIds",
+              foreignField: "_id",
+              as: "menuItems",
+            },
+          },
+          {
+            $unwind: "$menuItems",
+          },
+          {
+            $group: {
+              _id: "$menuItems.category",
+              quantity: { $sum: 1 },
+              revenue: { $sum: "$menuItems.price" },
+            },
+          },
+        ])
+        .toArray();
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
